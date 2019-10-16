@@ -11,6 +11,8 @@
 namespace OneMinuteExperienceApiV2;
 
 use \Directus\Application\Application;
+use \Directus\Services\FilesServices;
+use \Directus\Database\TableGatewayFactory;
 use \GuzzleHttp\Client;
 
 class AzureCustomVisionTrainer
@@ -65,6 +67,41 @@ class AzureCustomVisionTrainer
     {
         $this->createImageFromImageData($image, $data);
         $this->trainAndPublishIteration($force = true);
+    }
+
+    /**
+     * Do verbose things. With the image and display photos.
+     *
+     * @param array $artwork The artwork.
+     */
+    function doTheVerboseThings(array $artwork)
+    {
+        $container = Application::getInstance()->getContainer();
+        $logger = $container->get('logger');
+        $dbConnection = $container->get('database');
+
+        $tableGateway = TableGatewayFactory::create(
+            'artwork', ['connection' => $dbConnection]
+        );
+
+        $items = $tableGateway->getItems([
+            'meta' => '*',
+            'filter' => ['id' => $artwork['id']],
+            'fields' => 'image,photos_of_artwork_on_display.directus_files_id.data'
+        ]);
+
+        $logger->debug('Items', $items);
+
+        $filesService = new FilesServices($container);
+        $image = $filesService->findByIds($artwork['image']);
+
+        $display_images = $items['data'][0]['photos_of_artwork_on_display'];
+        $urls = array_map(
+            function ($i) {
+                return $i['directus_files_id']['data']['full_url'];
+            }, $display_images
+        );
+        $logger->debug('Urls', $urls);
     }
 
     /**
