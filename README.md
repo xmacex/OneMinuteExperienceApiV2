@@ -1,5 +1,12 @@
 # OneMinuteExperienceApiV2
-Backend stuff for the GIFT One Minute Experience
+
+Backend stuff for the GIFT One Minute Experience.
+
+This is implemented as a Directus extension, namely a web hook.
+
+## Installation
+
+Make a symlink from `directus/public/extensions/custom/hooks` to the directory where *hooks.php* resides.
 
 ## Configuration
 
