@@ -16,8 +16,6 @@ require_once 'AzureCustomVisionTrainer.php';
 return [
     'actions' => [
         'item.create.artwork' => function (array $data) {
-            // $config = parse_ini_file('config.ini', true);
-            // $config = parse_ini_file('../../../../../ome.ini', true);
             $config = parse_ini_file(
                 '/var/www/1mev2/directus/config/ome.ini',
                 true
@@ -35,7 +33,6 @@ return [
 
             $logger->debug('Created data', $data);
 
-            // $azure = new AzureCustomVisionTrainer();
             $azure = new AzureCustomVisionTrainer(
                 $config['project']['endpoint'],
                 $config['project']['id'],
@@ -43,7 +40,8 @@ return [
                 $config['prediction']['resource_id'],
                 $config['prediction']['production_model']
             );
-            $azure->doTheProductiveThings($image, $data);
+            // $azure->doTheProductiveThings($image, $data);
+            $azure->doTheVerboseThings($data);
         },
         'item.update.artwork' => function (array $data) {
             $config = parse_ini_file(

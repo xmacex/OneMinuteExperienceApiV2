@@ -22,8 +22,8 @@ class AzureCustomVisionTrainer
      */
     function __construct($endpoint, $project_id, $train_key, $pred_res_id, $pub_model_name)
     {
-        $container = Application::getInstance()->getContainer();
-        $this->logger = $container->get('logger');
+        $this->container = Application::getInstance()->getContainer();
+        $this->logger = $this->container->get('logger');
 
         $this->endpoint = $endpoint;
         $this->project_id = $project_id;
@@ -76,34 +76,91 @@ class AzureCustomVisionTrainer
      */
     function doTheVerboseThings(array $artwork)
     {
-        $container = Application::getInstance()->getContainer();
-        $dbConnection = $container->get('database');
+        $this->createImagesFromArtwork($artwork);
+        // $this->trainAndPublishIteration($force = true);
+    }
 
-        $tableGateway = TableGatewayFactory::create(
-            'artwork', ['connection' => $dbConnection]
-        );
+    /**
+     * Create images on Azure Custom Vision.
+     *
+     * @param array $artwork Artwork description.
+     *
+     * @return void
+     */
+    function createImagesFromArtwork(array $artwork)
+    {
+        $this->logger->debug('Create with artwork data', $artwork);
 
-        // Get the basic image.
-        $filesService = new FilesServices($container);
+        // First create a tag
+        $this->logger->debug('First making a tag for artwork.', $artwork);
+        $tagname = $artwork['artist_name'] . ': ' . $artwork['title'];
+        $tag = $this->createTag($tagname);
+
+        // Then get the main image.
+        $filesService = new FilesServices($this->container);
         $image = $filesService->findByIds($artwork['image']);
+        $this->logger->debug('Main image', $image);
 
-        // Using the artwork, get the photos of it on display
-        $items = $tableGateway->getItems([
-            'meta' => '*',
-            'filter' => ['id' => $artwork['id']],
-            'fields' => 'photos_of_artwork_on_display.directus_files_id.data'
-        ]);
-        $this->logger->debug('Items', $items);
+        // Then get the display photos.
+        $tableGateway = TableGatewayFactory::create(
+            'artwork',
+            ['connection' => $this->container->get('database')]
+        );
+        // FIXME: A blocking issue here is that none of this is yet in
+        // the database, so TableGateway won't find them. This stuff
+        // is not in the payload that comes to this function, because
+        // relations are done afterwards. Another way is necessary!
+        $items = $tableGateway->getItems(
+            [
+                'meta' => '*',
+                'filter' => ['id' => $artwork['id']],
+                'fields' => 'photos_of_artwork_on_display.directus_files_id.data'
+            ]
+        );
+        $this->logger->debug('Items from database', $items);
         
         $display_images = $items['data'][0]['photos_of_artwork_on_display'];
         $this->logger->debug('Display images', $display_images);
-        // Extract the urls
-        $urls = array_map(
+
+        // Then extract just urls.
+        $display_urls = array_map(
             function ($i) {
                 return $i['directus_files_id']['data']['full_url'];
             }, $display_images
         );
-        $this->logger->debug('Urls', $urls);
+        $this->logger->debug('Display photo urls', $display_urls);
+
+        // Collect.
+        $urls = array_merge($image['full_url'], $display_urls);
+
+        // Push it.
+        $data = [
+            'images' => array_map(
+                function ($url) {
+                    return ['url' => $url];
+                }, $display_urls
+            ),
+            'tagIds' => [$tag->id]
+        ];
+
+        $this->logger->debug('Request to send', $data);
+
+
+        $client = $this->createClient();
+
+        $response = $client->post(
+            $this->training_endpoint . '/images/urls',
+            ['json' => $data]
+        );
+
+        $this->logger->debug(
+            'Azure CV image creation response headers',
+            $response->getHeaders()
+        );
+        $this->logger->debug(
+            // 'Azure CV training body',
+            $response->getBody()
+        );
     }
 
     /**
