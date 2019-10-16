@@ -77,31 +77,33 @@ class AzureCustomVisionTrainer
     function doTheVerboseThings(array $artwork)
     {
         $container = Application::getInstance()->getContainer();
-        $logger = $container->get('logger');
         $dbConnection = $container->get('database');
 
         $tableGateway = TableGatewayFactory::create(
             'artwork', ['connection' => $dbConnection]
         );
 
-        $items = $tableGateway->getItems([
-            'meta' => '*',
-            'filter' => ['id' => $artwork['id']],
-            'fields' => 'image,photos_of_artwork_on_display.directus_files_id.data'
-        ]);
-
-        $logger->debug('Items', $items);
-
+        // Get the basic image.
         $filesService = new FilesServices($container);
         $image = $filesService->findByIds($artwork['image']);
 
+        // Using the artwork, get the photos of it on display
+        $items = $tableGateway->getItems([
+            'meta' => '*',
+            'filter' => ['id' => $artwork['id']],
+            'fields' => 'photos_of_artwork_on_display.directus_files_id.data'
+        ]);
+        $this->logger->debug('Items', $items);
+        
         $display_images = $items['data'][0]['photos_of_artwork_on_display'];
+        $this->logger->debug('Display images', $display_images);
+        // Extract the urls
         $urls = array_map(
             function ($i) {
                 return $i['directus_files_id']['data']['full_url'];
             }, $display_images
         );
-        $logger->debug('Urls', $urls);
+        $this->logger->debug('Urls', $urls);
     }
 
     /**
