@@ -63,19 +63,19 @@ class AzureCustomVisionTrainer
      */
     function doTheProductiveThings(array $image, array $data)
     {
-        $this->createImageFromUrls($image, $data);
+        $this->createImageFromImageData($image, $data);
         $this->trainAndPublishIteration($force = true);
     }
 
     /**
-     * Create images from URLs.
+     * Create an image on Azure Custom Vision.
      *
      * @param array $image   List of image urls.
      * @param array $artwork Artwork description.
      *
      * @return void
      */
-    function createImageFromUrls(array $image, array $artwork)
+    function createImageFromImageData(array $image, array $artwork)
     {
         $this->logger->debug('Create with image data ', $image);
         $this->logger->debug('Create with artwork data', $artwork);
