@@ -15,6 +15,17 @@ require_once 'AzureCustomVisionTrainer.php';
 
 return [
     'actions' => [
+        'item.create.artwork_photos' => function ($data) {
+            $config = parse_ini_file(
+                '/var/www/1mev2/directus/config/ome.ini',
+                true
+            );
+            
+            $container = Application::getInstance()->getContainer();
+            $logger = $container->get('logger');
+
+            $logger->debug('Create artwork photos junction', $data);
+        },
         'item.create.artwork' => function (array $data) {
             $config = parse_ini_file(
                 '/var/www/1mev2/directus/config/ome.ini',
