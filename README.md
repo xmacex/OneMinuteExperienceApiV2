@@ -27,3 +27,13 @@ key             = "your-prediction-key-here"
 resource_id     = "your-prediction-reseource-id-here-it-starts-with-subscription-and-is-a-approximately-as-long-as-this-template-string-here"
 production_model = "production"
 ```
+
+## Testing
+
+To run automatic tests on this thing, the the extend that they've been written, do the following
+
+1. `composer install` to get dependencies, importantly PHPUnit.
+1. Get Directus into `lib/` with `git clone https://github.com/directus/directus.git` or by symlinking or whatever.
+1. `./vendor/phpunit/phpunit/phpunit` runs the tests with setting from `phpunit.xml`.
+
+Or to be explicit about it without the config file, `./vendor/phpunit/phpunit/phpunit --bootstrap vendor/autoload.php --testdox --colors tests`.
