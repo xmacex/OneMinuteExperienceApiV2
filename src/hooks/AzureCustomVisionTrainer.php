@@ -80,9 +80,8 @@ class AzureCustomVisionTrainer
         $this->logger->debug('Create with image data ', $image);
         $this->logger->debug('Create with artwork data', $artwork);
 
-        $this->logger->debug('First making a tag for artwork.', $artwork);
-        $tagname = $artwork['artist_name'] . ': ' . $artwork['title'];
-        $tag = $this->createTag($tagname);
+        // First make a tag for it.
+        $tag = $this->createTagFromImage($image);
 
         $client = $this->createClient();
 
@@ -116,6 +115,27 @@ class AzureCustomVisionTrainer
             // 'Azure CV training body',
             $response->getBody()
         );
+    }
+
+    /**
+     * Create a new tag from an artwork
+     *
+     * @param array $artwork An artwork.
+     *
+     * @return array The tag.
+     */
+    function createTagFromImage(array $artwork)
+    {
+        $this->logger->debug('Creating a tag for artwork', $artwork);
+
+        $aid = $artwork['id'];
+        $artist = $artwork['artist_name'];
+        $title = $artwork['title'];
+        $tagname = $aid . ': ' . $artist . ' - ' . $title;
+
+        $tag = $this->createTag($tagname);
+
+        return $tag;
     }
 
     /**
