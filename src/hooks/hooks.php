@@ -65,9 +65,7 @@ return [
                 $config['prediction']['resource_id'],
                 $config['prediction']['production_model']
             );
-            // $azure->doTheProductiveThings($image, $artwork);
-            $azure->createImagesFromFiles($image, $artwork);
-            $azure->trainAndPublishIteration();
+            $azure->doTheProductiveThings($image, $artwork);
         },
         'item.update.artwork' => function (array $artwork) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
@@ -96,8 +94,7 @@ return [
 
                 $logger->debug('Artwork image data', $image);
 
-                $azure->createImagesFromFiles($image, $artwork);
-                $azure->trainAndPublishIteration();
+                $azure->doTheProductiveThings($image, $artwork);
             }
             // TODO: Also if artist_name or title was updated, rename
             // the tag.

@@ -75,8 +75,8 @@ class AzureCustomVisionTrainer
      */
     function doTheProductiveThings(array $image, array $data)
     {
-        $this->createImagesFromFiles($image, $data);
-        $this->trainAndPublishIteration($force = true);
+        $azure->createImagesFromFiles($image, $artwork);
+        $azure->trainAndPublishIteration();
     }
 
     /**
@@ -399,14 +399,14 @@ class AzureCustomVisionTrainer
 
         $iterations = $this->getIterations();
         $idx = array_search(
-            'production',
+            $this->pub_model_name,
             array_column($iterations, 'publishName')
         );
 
         if ($idx === false) {
             $this->logger->warning('No ' . $this->pub_model_name . ' active');
         } else {
-            $prod_model = $iteration[$idx];
+            $prod_model = $iterations[$idx];
         }
 
         $this->logger->debug(
