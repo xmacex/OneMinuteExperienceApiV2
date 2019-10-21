@@ -18,9 +18,20 @@ class AzureCustomVisionTrainer
 {
     /**
      * Class constructor.
+     *
+     * @param string $endpoint       Training endpoint URL, with region.
+     * @param string $project_id     Project ID.
+     * @param string $train_key      Training key.
+     * @param string $pred_res_id    Prediction resource ID for publishing.
+     * @param string $pub_model_name Name of the published iteration.
+     *
+     * @return void
      */
-    function __construct($endpoint, $project_id, $train_key, $pred_res_id, $pub_model_name)
-    {
+    function __construct(
+        $endpoint, $project_id,
+        $train_key,
+        $pred_res_id, $pub_model_name
+    ) {
         $container = Application::getInstance()->getContainer();
         $this->logger = $container->get('logger');
 
@@ -30,7 +41,7 @@ class AzureCustomVisionTrainer
         $this->pred_res_id = $pred_res_id;
         $this->pub_model_name = $pub_model_name;
 
-        $this->training_endpoint = $this->endpoint . '/customvision/v3.0/training/projects/' . $this->project_id;        
+        $this->training_endpoint = $this->endpoint . '/customvision/v3.0/training/projects/' . $this->project_id;
         $this->training_delay = 5;
     }
 
@@ -119,29 +130,9 @@ class AzureCustomVisionTrainer
     }
 
     /**
-     * Create a new tag from an artwork
-     *
-     * @param array $artwork An artwork.
-     *
-     * @return array The tag.
-     */
-    function createTagFromArtwork(array $artwork)
-    {
-        $this->logger->debug('Creating a tag for artwork', $artwork);
-
-        $aid = $artwork['id'];
-        $artist = $artwork['artist_name'];
-        $title = $artwork['title'];
-        $tagname = $aid . ': ' . $artist . ' - ' . $title;
-
-        $tag = $this->createTag($tagname);
-
-        return $tag;
-    }
-        
-    /**
      * Create images from data.
      *
+     * @param array $image   An image.
      * @param array $artwork An artwork.
      *
      * @return void
@@ -152,8 +143,6 @@ class AzureCustomVisionTrainer
         $this->logger->debug('Create with artwork data', $artwork);
 
         $client = $this->createClient();
-
-        $this->logger->debug('Created an HTTP client');
 
         $fileurl = $image['data']['full_url'];
         // FIXME: Note thumbnails are scaled and squared.
@@ -201,6 +190,27 @@ class AzureCustomVisionTrainer
             // 'Azure CV training body',
             $response->getBody()
         );
+    }
+
+    /**
+     * Create a new tag from an artwork
+     *
+     * @param array $artwork An artwork.
+     *
+     * @return array The tag.
+     */
+    function createTagFromArtwork(array $artwork)
+    {
+        $this->logger->debug('Creating a tag for artwork', $artwork);
+
+        $aid = $artwork['id'];
+        $artist = $artwork['artist_name'];
+        $title = $artwork['title'];
+        $tagname = $aid . ': ' . $artist . ' - ' . $title;
+
+        $tag = $this->createTag($tagname);
+
+        return $tag;
     }
 
     /**

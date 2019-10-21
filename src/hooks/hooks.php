@@ -15,7 +15,10 @@ use \OneMinuteExperienceApiV2\AzureCustomVisionTrainer;
 require_once 'AzureCustomVisionTrainer.php';
 
 return [
-    // FIXME: Filters are not triggering, sadly. Reported at https://github.com/directus/api/issues/1364
+    // FIXME: Filters are not triggering, sadly. Reported at
+    // https://github.com/directus/api/issues/1364. This is where I
+    // want to store the UUID of the tag returned by upstream Azure
+    // Custom Vision service.
     'filters' => [
         'item.create.artwork' => function (Payload $payload) {
             $container = Application::getInstance()->getContainer();
@@ -90,7 +93,6 @@ return [
 
                 $logger->debug('Artwork image data', $image);
 
-                // $azure->createImageFromUrls($image, $artwork);
                 $azure->createImagesFromFiles($image, $artwork);
                 // $azure->trainAndPublishIteration();
             }
@@ -98,6 +100,4 @@ return [
             // the tag.
         },
     ]
-        }
-    ],
 ];
