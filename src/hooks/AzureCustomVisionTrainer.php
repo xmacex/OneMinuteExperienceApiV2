@@ -11,6 +11,7 @@
 namespace OneMinuteExperienceApiV2;
 
 use \Directus\Application\Application;
+use \Directus\Services\FilesServices;
 use \GuzzleHttp\Client;
 
 class AzureCustomVisionTrainer
@@ -136,6 +137,70 @@ class AzureCustomVisionTrainer
         $tag = $this->createTag($tagname);
 
         return $tag;
+    }
+        
+    /**
+     * Create images from data.
+     *
+     * @param array $artwork An artwork.
+     *
+     * @return void
+     */
+    function createImagesFromFiles(array $image, array $artwork)
+    {
+        $this->logger->debug('Create with image data', $image);
+        $this->logger->debug('Create with artwork data', $artwork);
+
+        $client = $this->createClient();
+
+        $this->logger->debug('Created an HTTP client');
+
+        $fileurl = $image['data']['full_url'];
+        // FIXME: Note thumbnails are scaled and squared.
+        $fileurl = $image['data']['thumbnails'][0]['url'];
+        $this->logger->debug('Reading file ' . $fileurl);
+        $imagedata = file_get_contents($fileurl);
+        $this->logger->debug('Read file len ' . strlen($imagedata));
+
+        $base64 = base64_encode($imagedata);
+        // $this->logger->debug('Base64' . $base64);
+
+        $images = [
+            'images' => [
+                // Images are placed here as ['contents' => BASE64]
+            ],
+            // FIXME: This obviously needs to come from data.
+            'tagIds' => ['e1e2d8ca-a7e4-4262-a8db-c4bce4ca8104']
+        ];
+
+        // Rotations
+        foreach ([-10, -5, 0, 5, 10] as $angle) {
+            $imagick = new \Imagick($fileurl);
+            $imagick->rotateimage('#00000000', $angle);
+            $base64 = base64_encode($imagick->getImageBlob());
+            $images['images'][] = ['contents' => $base64];
+        }
+
+        $this->logger->debug('Body to send', $images);
+
+        $response = $client->post(
+            $this->training_endpoint . '/images/files',
+            ['json' => $images]
+        );
+
+        // $response = $client->post(
+        //     'http://localhost:5005' . '/images/files',
+        //     ['json' => $images]
+        // );
+
+        $this->logger->debug(
+            'Azure CV training headers',
+            $response->getHeaders()
+        );
+        $this->logger->debug(
+            // 'Azure CV training body',
+            $response->getBody()
+        );
     }
 
     /**
