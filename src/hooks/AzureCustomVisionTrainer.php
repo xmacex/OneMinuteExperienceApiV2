@@ -11,6 +11,7 @@
 namespace OneMinuteExperienceApiV2;
 
 use \Directus\Application\Application;
+use \Directus\Services\FilesServices;
 use \GuzzleHttp\Client;
 
 class AzureCustomVisionTrainer
@@ -107,6 +108,69 @@ class AzureCustomVisionTrainer
             $this->training_endpoint . '/images/urls',
             ['json' => $urls]
         );
+
+        $this->logger->debug(
+            'Azure CV training headers',
+            $response->getHeaders()
+        );
+        $this->logger->debug(
+            // 'Azure CV training body',
+            $response->getBody()
+        );
+    }
+
+    /**
+     * Create images from data.
+     *
+     * @param array $artwork An artwork.
+     *
+     * @return void
+     */
+    function createImagesFromFiles(array $artwork)
+    {
+        $this->logger->debug('Create with artwork data', $artwork);
+
+        $client = $this->createClient();
+
+        $this->logger->debug('Created an HTTP client');
+
+        $container = Application::getInstance()->getContainer();
+        $filesService = new FilesServices($container);
+        $file = $filesService->findByIds($artwork['image']);
+        $image = $file['data'];
+        $this->logger->debug('Fetched file', $image);
+
+        $fileurl = $image['data']['full_url'];
+        // FIXME: Note thumbnails are scaled and squared.
+        $fileurl = $image['data']['thumbnails'][0]['url'];
+        $this->logger->debug('Reading file ' . $fileurl);
+        $imagedata = file_get_contents($fileurl);
+        $this->logger->debug('Read file len ' . strlen($imagedata));
+
+        $base64 = base64_encode($imagedata);
+        // $this->logger->debug('Base64' . $base64);
+
+        $images = [
+            'images' => [
+                // TODO: populate with real image data
+                ['name' => uniqid(), 'contents' => $base64],
+                ['name' => uniqid(), 'contents' => $base64],
+                ['name' => uniqid(), 'contents' => $base64],
+                ['name' => uniqid(), 'contents' => $base64],
+                ['name' => uniqid(), 'contents' => $base64]
+            ],
+            'tagIds' => ['kittens']
+        ];
+
+        $response = $client->post(
+            $this->training_endpoint . '/images/files',
+            ['json' => $images]
+        );
+
+        // $response = $client->post(
+        //     'http://localhost:5005' . '/images/files',
+        //     ['json' => $images]
+        // );
 
         $this->logger->debug(
             'Azure CV training headers',
