@@ -183,7 +183,12 @@ class AzureCustomVisionTrainer
     {
         $this->logger->debug('Training and publishing an iteration');
         $iteration = $this->trainIteration($force);
-        sleep($this->training_delay); // FIXME: Lulz
+        while ($iteration['status'] != 'Completed') {
+            $this->logger->debug('Waiting iteration ' . $iteration['id'] . ' for ' . $this->training_delay);
+            sleep($this->training_delay);
+            $iteration = $this->getIteration($iteration['id']);
+        }
+        $this->logger->debug('Trained iteration ', $iteration);
 
         $this->publishIteration($iteration->id);
     }
@@ -306,9 +311,28 @@ class AzureCustomVisionTrainer
     }
 
     /**
+     * Get iteration.
+     *
+     * @param string $id Iteration ID.
+     *
+     * @return array     Iteration.
+     */
+    function getIteration(string $id)
+    {
+        $this->logger->debug('Getting iteration ' . $id);
+
+        $client = $this->createClient();
+        $response = $client->get($this->training_endpoint . '/iterations/' . $id);
+
+        $iteration = json_decode($response->getBody());
+
+        return $iteration;
+    }
+
+    /**
      * Get newest iteration.
      *
-     * @return void
+     * @return array iteration.
      */
     function getNewestIteration()
     {
