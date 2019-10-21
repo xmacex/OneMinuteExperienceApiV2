@@ -31,11 +31,7 @@ return [
                 $config['prediction']['production_model']
             );
 
-            $aid = $payload->get('id');
-            $artist = $payload->get('artist_name');
-            $title = $payload->get('title');
-            $tagname = $aid . ': ' . $artist . ' - ' . $title;
-            $tag = $azure->createTag($tagname);
+            $tag = $azure->createTagFromImage($image);
             $payload->set('image_recognition_tag_id', $tag['id']);
 
             $logger->debug('After setting the tag UUID.', (array)$payload);
