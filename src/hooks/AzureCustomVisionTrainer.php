@@ -75,7 +75,7 @@ class AzureCustomVisionTrainer
      */
     function doTheProductiveThings(array $image, array $data)
     {
-        $this->createImageFromUrls($image, $data);
+        $this->createImagesFromFiles($image, $data);
         $this->trainAndPublishIteration($force = true);
     }
 
@@ -107,8 +107,6 @@ class AzureCustomVisionTrainer
                     'url' => $image['data']['data']['full_url']
                 ]
             ],
-            // FIXME: this needs to actually come from data.
-            //'tagIds' => ['2cab4fc8-1e0c-4fbc-98f7-ac2332878738']
             'tagIds' => [$tag->id]
         ];
 
@@ -142,6 +140,9 @@ class AzureCustomVisionTrainer
         $this->logger->debug('Create with image data', $image);
         $this->logger->debug('Create with artwork data', $artwork);
 
+        // First make a tag for it.
+        $tag = $this->createTagFromArtwork($artwork);
+
         $client = $this->createClient();
 
         $fileurl = $image['data']['full_url'];
@@ -158,8 +159,7 @@ class AzureCustomVisionTrainer
             'images' => [
                 // Images are placed here as ['contents' => BASE64]
             ],
-            // FIXME: This obviously needs to come from data.
-            'tagIds' => ['e1e2d8ca-a7e4-4262-a8db-c4bce4ca8104']
+            'tagIds' => [$tag->id]
         ];
 
         // Rotations
@@ -256,6 +256,14 @@ class AzureCustomVisionTrainer
         } else {
             $response = $client->post($this->training_endpoint . '/train');
         }
+        $this->logger->debug(
+            'Azure CV iteration headers',
+            $response->getHeaders()
+        );
+        $this->logger->debug(
+            // 'Azure CV iterations body',
+            $response->getBody()
+        );
 
         if ($response->getStatusCode() == 200) {
             $iteration = json_decode($response->getBody());
@@ -278,13 +286,16 @@ class AzureCustomVisionTrainer
     {
         $this->logger->debug('Training and publishing an iteration');
         $iteration = $this->trainIteration($force);
-        while ($iteration['status'] != 'Completed') {
-            $this->logger->debug('Waiting iteration ' . $iteration['id'] . ' for ' . $this->training_delay);
+        while ($iteration->status != 'Completed') {
+            $this->logger->debug('Waiting iteration ' . $iteration->id . ' for ' . $this->training_delay);
             sleep($this->training_delay);
-            $iteration = $this->getIteration($iteration['id']);
+            $iteration = $this->getIteration($iteration->id);
         }
-        $this->logger->debug('Trained iteration ', $iteration);
+        $this->logger->debug('Trained iteration ' . $iteration->id);
 
+        // $current = $this->getProductionIteration();
+        // $this->unpublishIteration($current);
+        $this->unpublishProductionIteration();
         $this->publishIteration($iteration->id);
     }
 

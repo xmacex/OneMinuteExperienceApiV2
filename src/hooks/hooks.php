@@ -43,16 +43,17 @@ return [
         }
     ],
     'actions' => [
-        'item.create.artwork' => function (array $data) {
+        'item.create.artwork' => function (array $artwork) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
 
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
 
-            $logger->debug('Artwork data', $data);
+            $logger->debug('Artwork data', $artwork);
 
             $filesService = new FilesServices($container);
-            $image = $filesService->findByIds($data['image']);
+            $file = $filesService->findByIds($artwork['image']);
+            $image = $file['data'];
 
             $logger->debug('Artwork image data', $image['data']);
 
@@ -64,7 +65,9 @@ return [
                 $config['prediction']['resource_id'],
                 $config['prediction']['production_model']
             );
-            $azure->doTheProductiveThings($image, $data);
+            // $azure->doTheProductiveThings($image, $artwork);
+            $azure->createImagesFromFiles($image, $artwork);
+            $azure->trainAndPublishIteration();
         },
         'item.update.artwork' => function (array $artwork) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
@@ -94,7 +97,7 @@ return [
                 $logger->debug('Artwork image data', $image);
 
                 $azure->createImagesFromFiles($image, $artwork);
-                // $azure->trainAndPublishIteration();
+                $azure->trainAndPublishIteration();
             }
             // TODO: Also if artist_name or title was updated, rename
             // the tag.
