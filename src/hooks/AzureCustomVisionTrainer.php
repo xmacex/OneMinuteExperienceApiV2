@@ -81,7 +81,7 @@ class AzureCustomVisionTrainer
         $this->logger->debug('Create with artwork data', $artwork);
 
         // First make a tag for it.
-        $tag = $this->createTagFromImage($image);
+        $tag = $this->createTagFromArtwork($artwork);
 
         $client = $this->createClient();
 
@@ -124,7 +124,7 @@ class AzureCustomVisionTrainer
      *
      * @return array The tag.
      */
-    function createTagFromImage(array $artwork)
+    function createTagFromArtwork(array $artwork)
     {
         $this->logger->debug('Creating a tag for artwork', $artwork);
 
