@@ -147,15 +147,21 @@ class AzureCustomVisionTrainer
 
         $images = [
             'images' => [
-                // TODO: populate with real image data
-                ['name' => uniqid(), 'contents' => $base64],
-                ['name' => uniqid(), 'contents' => $base64],
-                ['name' => uniqid(), 'contents' => $base64],
-                ['name' => uniqid(), 'contents' => $base64],
-                ['name' => uniqid(), 'contents' => $base64]
+                // Images are placed here as ['contents' => BASE64]
             ],
-            'tagIds' => ['kittens']
+            // FIXME: This obviously needs to come from data.
+            'tagIds' => ['e1e2d8ca-a7e4-4262-a8db-c4bce4ca8104']
         ];
+
+        // Rotations
+        foreach ([-10, -5, 0, 5, 10] as $angle) {
+            $imagick = new \Imagick($fileurl);
+            $imagick->rotateimage('#00000000', $angle);
+            $base64 = base64_encode($imagick->getImageBlob());
+            $images['images'][] = ['contents' => $base64];
+        }
+
+        $this->logger->debug('Body to send', $images);
 
         $response = $client->post(
             $this->training_endpoint . '/images/files',
