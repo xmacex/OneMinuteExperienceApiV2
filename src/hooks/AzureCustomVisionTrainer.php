@@ -126,19 +126,14 @@ class AzureCustomVisionTrainer
      *
      * @return void
      */
-    function createImagesFromFiles(array $artwork)
+    function createImagesFromFiles(array $image, array $artwork)
     {
+        $this->logger->debug('Create with image data', $image);
         $this->logger->debug('Create with artwork data', $artwork);
 
         $client = $this->createClient();
 
         $this->logger->debug('Created an HTTP client');
-
-        $container = Application::getInstance()->getContainer();
-        $filesService = new FilesServices($container);
-        $file = $filesService->findByIds($artwork['image']);
-        $image = $file['data'];
-        $this->logger->debug('Fetched file', $image);
 
         $fileurl = $image['data']['full_url'];
         // FIXME: Note thumbnails are scaled and squared.

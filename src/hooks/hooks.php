@@ -71,7 +71,7 @@ return [
                 $logger->debug('Artwork image data', $image);
 
                 // $azure->createImageFromUrls($image, $artwork);
-                $azure->createImagesFromFiles($artwork);
+                $azure->createImagesFromFiles($image, $artwork);
                 // $azure->trainAndPublishIteration();
             }
             // TODO: Also if artist_name or title was updated, rename
