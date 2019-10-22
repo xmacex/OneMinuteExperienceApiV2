@@ -236,6 +236,62 @@ class AzureCustomVisionTrainer
     }
 
     /**
+     * Delete a tag and it's associated images.
+     *
+     * @param string $id The UUID of the tag.
+     *
+     * @return void
+     */
+    function deleteTagAndImages(string $id)
+    {
+        $this->logger->debug('Deleting tag and its images ' . $id);
+
+        $images = $this->getTaggedImages($id);
+        $this->deleteImages($images);
+        $this->deleteTag($id);
+    }
+
+    /**
+     * Get images tagged with a tag.
+     *
+     * @param string $id The tag id.
+     *
+     * @return array Of images
+     */
+    function getTaggedImages(string $id)
+    {
+        $this->logger->debug('Getting images tagged with ' . $id);
+
+        $images = [];
+
+        return $images;
+    }
+
+    /**
+     * Delete images.
+     *
+     * @param array $images Images
+     *
+     * @return void
+     */
+    function deleteImages(array $images)
+    {
+        $this->logger->debug('images', $images);
+    }
+
+    /**
+     * Delete a tag.
+     *
+     * @param string $id The tag id.
+     *
+     * @return void
+     */
+    function deleteTag(string $id)
+    {
+        $this->logger->debug('Deleting tag' . $id);
+    }
+
+    /**
      * Train new iteration.
      *
      * @param boolean $force Force the training even if nothing changed.

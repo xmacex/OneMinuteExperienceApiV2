@@ -10,6 +10,7 @@
 use \Directus\Application\Application;
 use \Directus\Services\FilesServices;
 use \Directus\Hook\Payload;
+use \Directus\Services\ItemsService;
 use \OneMinuteExperienceApiV2\AzureCustomVisionTrainer;
 
 require_once 'AzureCustomVisionTrainer.php';
@@ -41,14 +42,21 @@ return [
             return $payload;
         },
         'item.update.artwork:before' => function (Payload $payload) {
+            $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
+
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
 
             $artwork = $payload->getData();
             $logger->debug('Artwork update filter', $artwork);
-            // TODO: if $payload->get('status') == "deleted" aka. if
-            // $artwork['status'] == "deleted", then remove the tag,
-            // the images and retrain and republish.
+
+            // $azure = new AzureCustomVisionTrainer(
+            //     $config['project']['endpoint'],
+            //     $config['project']['id'],
+            //     $config['training']['key'],
+            //     $config['prediction']['resource_id'],
+            //     $config['prediction']['production_model']
+            // );
 
             // TODO: if $payload->has('image') or exists
             // $artwork['image'], then remove the tag, the images,
@@ -84,7 +92,7 @@ return [
             $azure->createImagesFromFiles($image, $artwork);
             $azure->trainAndPublishIteration();
         },
-        'item.update.artwork' => function (array $artwork) {
+        'item.update.artwork:before' => function (array $artwork) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
 
             $container = Application::getInstance()->getContainer();
@@ -95,26 +103,36 @@ return [
             // The received item contains, beside the id and
             // modification metadata, only the changed fields. So
             // let's use that knowledge.
-            if (array_key_exists('image', $artwork)) {
-                // image was updated. Do stuff.
-                $azure = new AzureCustomVisionTrainer(
-                    $config['project']['endpoint'],
-                    $config['project']['id'],
-                    $config['training']['key'],
-                    $config['prediction']['resource_id'],
-                    $config['prediction']['production_model']
-                );
 
-                $filesService = new FilesServices($container);
-                $file = $filesService->findByIds($artwork['image']);
-                $image = $file['data'];
+            $azure = new AzureCustomVisionTrainer(
+                $config['project']['endpoint'],
+                $config['project']['id'],
+                $config['training']['key'],
+                $config['prediction']['resource_id'],
+                $config['prediction']['production_model']
+            );
 
-                $logger->debug('Artwork image data', $image);
+            // if (array_key_exists('image', $artwork)) {
+            //     $filesService = new FilesServices($container);
+            //     $file = $filesService->findByIds($artwork['image']);
+            //     $image = $file['data'];
 
-                $azure->doTheProductiveThings($image, $artwork);
-            }
+            //     $logger->debug('Artwork image data', $image);
+
+            //     $azure->doTheProductiveThings($image, $artwork);
+            // }
             // TODO: Also if artist_name or title was updated, rename
             // the tag.
+            if ($artwork['status'] == "deleted") {
+                // FIXME: Retrain and republish
+                $logger->debug('Item deleted action', $artwork);
+                $itemsService = new ItemsService($container);
+                $item = $itemsService->find('artwork', $artwork['id']);
+                $logger->debug('Lifted', $item);
+                $tag = $item['data']['image_recognition_tag_id'];
+                $azure->deleteTagAndImages($tag);
+                //$azure->trainAndPublishIteration();
+            }
         },
     ]
 ];
