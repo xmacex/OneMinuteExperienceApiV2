@@ -244,7 +244,7 @@ class AzureCustomVisionTrainer
      */
     function deleteTagAndImages(string $id)
     {
-        $this->logger->debug('Deleting tag and its images ' . $id);
+        $this->logger->debug('Deleting tag and its images' . $id);
 
         $images = $this->getTaggedImages($id);
         $this->deleteImages($images);
@@ -262,7 +262,21 @@ class AzureCustomVisionTrainer
     {
         $this->logger->debug('Getting images tagged with ' . $id);
 
-        $images = [];
+        $client = $this->createClient();
+
+        $prod_model = $this->getProductionIteration();
+
+        $response = $client->get(
+            $this->training_endpoint . '/images/tagged',
+            [
+                'query' => [
+                    'iterationId' => $prod_model->id,
+                    'tagIds' => [$id]
+                ]
+            ]
+        );
+
+        $images = json_decode($response->getBody());
 
         return $images;
     }
@@ -270,13 +284,31 @@ class AzureCustomVisionTrainer
     /**
      * Delete images.
      *
-     * @param array $images Images
+     * @param array $images Images.
      *
      * @return void
      */
     function deleteImages(array $images)
     {
-        $this->logger->debug('images', $images);
+        $this->logger->debug('Deleting images', $images);
+
+        $client = $this->createClient();
+
+        $image_ids = array_column($images, 'id');
+
+        $response = $client->delete(
+            $this->training_endpoint . '/images',
+            ['query' => ['imageIds' => implode(',', $image_ids)]]
+        );
+
+        $this->logger->debug(
+            'Azure CV image deletion headers',
+            $response->getHeaders()
+        );
+        $this->logger->debug(
+            // 'Azure CV iterations body',
+            $response->getBody()
+        );
     }
 
     /**
@@ -288,7 +320,22 @@ class AzureCustomVisionTrainer
      */
     function deleteTag(string $id)
     {
-        $this->logger->debug('Deleting tag' . $id);
+        $this->logger->debug('Deleting tag ' . $id);
+
+        $client = $this->createClient();
+
+        $response = $client->delete(
+            $this->training_endpoint . '/tags/' . $id
+        );
+
+        $this->logger->debug(
+            'Azure CV tag deletion headers',
+            $response->getHeaders()
+        );
+        $this->logger->debug(
+            // 'Azure CV iterations body',
+            $response->getBody()
+        );
     }
 
     /**

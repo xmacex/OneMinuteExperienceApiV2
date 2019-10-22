@@ -130,7 +130,9 @@ return [
                 $item = $itemsService->find('artwork', $artwork['id']);
                 $logger->debug('Lifted', $item);
                 $tag = $item['data']['image_recognition_tag_id'];
-                $azure->deleteTagAndImages($tag);
+                if (!is_null($tag)) {
+                    $azure->deleteTagAndImages($tag);
+                }
                 //$azure->trainAndPublishIteration();
             }
         },
