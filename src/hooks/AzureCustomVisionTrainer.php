@@ -140,10 +140,9 @@ class AzureCustomVisionTrainer
         $this->logger->debug('Create with image data', $image);
         $this->logger->debug('Create with artwork data', $artwork);
 
-        // First make a tag for it.
-        $tag = $this->createTagFromArtwork($artwork);
-
         $client = $this->createClient();
+
+        $tag_id = $artwork['image_recognition_tag_id'];
 
         $fileurl = $image['data']['full_url'];
         // FIXME: Note thumbnails are scaled and squared.
@@ -159,7 +158,7 @@ class AzureCustomVisionTrainer
             'images' => [
                 // Images are placed here as ['contents' => BASE64]
             ],
-            'tagIds' => [$tag->id]
+            'tagIds' => [$tag_id]
         ];
 
         // Rotations

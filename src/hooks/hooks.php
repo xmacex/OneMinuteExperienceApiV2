@@ -42,11 +42,26 @@ return [
         //     return $payload;
         // }
         'item.create.artwork:before' => function (Payload $payload) {
+            $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
+
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
 
             $artwork = $payload->getData();
             $logger->debug('Artwork create filter', $artwork);
+
+            $azure = new AzureCustomVisionTrainer(
+                $config['project']['endpoint'],
+                $config['project']['id'],
+                $config['training']['key'],
+                $config['prediction']['resource_id'],
+                $config['prediction']['production_model']
+            );
+
+            $tag = $azure->createTagFromArtwork($artwork);
+            $payload->set('image_recognition_tag_id', $tag->id);
+
+            $logger->debug('Artwork after create filter', $artwork);
 
             return $payload;
         },
@@ -56,6 +71,8 @@ return [
 
             $artwork = $payload->getData();
             $logger->debug('Artwork update filter', $artwork);
+            // TODO: if $artwork['status'] == "deleted", then remove
+            // the tag, the images and retrain and republish.
 
             return $payload;
         }
@@ -83,7 +100,9 @@ return [
                 $config['prediction']['resource_id'],
                 $config['prediction']['production_model']
             );
-            $azure->doTheProductiveThings($image, $artwork);
+            // $azure->doTheProductiveThings($image, $artwork);
+            $azure->createImagesFromFiles($image, $artwork);
+            $azure->trainAndPublishIteration();
         },
         'item.update.artwork' => function (array $artwork) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
