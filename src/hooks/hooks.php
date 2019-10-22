@@ -34,8 +34,10 @@ return [
                 $config['prediction']['production_model']
             );
 
-            $tag = $azure->createTagFromArtwork($artwork);
-            $payload->set('image_recognition_tag_id', $tag->id);
+            if (!is_null($artwork['image'])) {
+                $tag = $azure->createTagFromArtwork($artwork);
+                $payload->set('image_recognition_tag_id', $tag->id);
+            }
 
             $logger->debug('Artwork after create filter', $artwork);
 
@@ -83,22 +85,24 @@ return [
 
             $logger->debug('Artwork data', $artwork);
 
-            $filesService = new FilesServices($container);
-            $file = $filesService->findByIds($artwork['image']);
-            $image = $file['data'];
+            if (!is_null($artwork['images'])) {
+                $filesService = new FilesServices($container);
+                $file = $filesService->findByIds($artwork['image']);
+                $image = $file['data'];
 
-            $logger->debug('Artwork image data', $image['data']);
+                $logger->debug('Artwork image data', $image['data']);
 
-            $azure = new AzureCustomVisionTrainer(
-                $config['project']['endpoint'],
-                $config['project']['id'],
-                $config['training']['key'],
-                $config['prediction']['resource_id'],
-                $config['prediction']['production_model']
-            );
-            // $azure->doTheProductiveThings($image, $artwork);
-            $azure->createImagesFromFiles($image, $artwork);
-            $azure->trainAndPublishIteration();
+                $azure = new AzureCustomVisionTrainer(
+                    $config['project']['endpoint'],
+                    $config['project']['id'],
+                    $config['training']['key'],
+                    $config['prediction']['resource_id'],
+                    $config['prediction']['production_model']
+                );
+                // $azure->doTheProductiveThings($image, $artwork);
+                $azure->createImagesFromFiles($image, $artwork);
+                $azure->trainAndPublishIteration();
+            }
         },
         'item.update.artwork:before' => function (array $artwork) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
