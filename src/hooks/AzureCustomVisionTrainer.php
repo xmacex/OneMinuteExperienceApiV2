@@ -73,10 +73,10 @@ class AzureCustomVisionTrainer
      *
      * @return void
      */
-    function doTheProductiveThings(array $image, array $data)
+    function doTheProductiveThings(array $image, array $artwork)
     {
-        $azure->createImagesFromFiles($image, $artwork);
-        $azure->trainAndPublishIteration();
+        $this->createImagesFromFiles($image, $artwork);
+        $this->trainAndPublishIteration();
     }
 
     /**
