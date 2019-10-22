@@ -42,7 +42,7 @@ class AzureCustomVisionTrainer
         $this->pub_model_name = $pub_model_name;
 
         $this->training_endpoint = $this->endpoint . '/customvision/v3.0/training/projects/' . $this->project_id;
-        $this->training_delay = 5;
+        $this->training_delay = 2;
     }
 
     /**

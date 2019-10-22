@@ -50,17 +50,26 @@ return [
             $artwork = $payload->getData();
             $logger->debug('Artwork update filter', $artwork);
 
-            // $azure = new AzureCustomVisionTrainer(
-            //     $config['project']['endpoint'],
-            //     $config['project']['id'],
-            //     $config['training']['key'],
-            //     $config['prediction']['resource_id'],
-            //     $config['prediction']['production_model']
-            // );
+            $azure = new AzureCustomVisionTrainer(
+                $config['project']['endpoint'],
+                $config['project']['id'],
+                $config['training']['key'],
+                $config['prediction']['resource_id'],
+                $config['prediction']['production_model']
+            );
 
-            // TODO: if $payload->has('image') or exists
-            // $artwork['image'], then remove the tag, the images,
-            // create a new tag tag and store it's UUID.
+            // The image was changed. Drop the tag on Azure and make a new one.
+            if ($payload->has('image')) {
+                $itemsService = new ItemsService($container);
+                $item = $itemsService->find('artwork', $artwork['id']);
+                $logger->debug('Lifted', $item);
+                $old_tag = $item['data']['image_recognition_tag_id'];
+
+                $azure->deleteTagAndImages($old_tag);
+
+                $tag = $azure->createTagFromArtwork($artwork);
+                $payload->set('image_recognition_tag_id', $tag->id);
+            }
 
             return $payload;
         }
@@ -80,7 +89,6 @@ return [
 
             $logger->debug('Artwork image data', $image['data']);
 
-            // $azure = new AzureCustomVisionTrainer();
             $azure = new AzureCustomVisionTrainer(
                 $config['project']['endpoint'],
                 $config['project']['id'],
@@ -112,17 +120,21 @@ return [
                 $config['prediction']['production_model']
             );
 
-            // if (array_key_exists('image', $artwork)) {
-            //     $filesService = new FilesServices($container);
-            //     $file = $filesService->findByIds($artwork['image']);
-            //     $image = $file['data'];
+            // The image was changed. Create the images and retrain.
+            if (array_key_exists('image', $artwork)) {
+                $filesService = new FilesServices($container);
+                $file = $filesService->findByIds($artwork['image']);
+                $image = $file['data'];
 
-            //     $logger->debug('Artwork image data', $image);
+                $logger->debug('Artwork image data', $image);
 
-            //     $azure->doTheProductiveThings($image, $artwork);
-            // }
+                $azure->createImagesFromFiles($image, $artwork);
+                $azure->trainAndPublishIteration();
+            }
             // TODO: Also if artist_name or title was updated, rename
             // the tag.
+
+            // The item was deleted. Drop the images and retrain.
             if ($artwork['status'] == "deleted") {
                 // FIXME: Retrain and republish
                 $logger->debug('Item deleted action', $artwork);
@@ -133,7 +145,7 @@ return [
                 if (!is_null($tag)) {
                     $azure->deleteTagAndImages($tag);
                 }
-                //$azure->trainAndPublishIteration();
+                $azure->trainAndPublishIteration();
             }
         },
     ]
