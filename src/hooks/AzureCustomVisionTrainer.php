@@ -13,6 +13,8 @@ namespace OneMinuteExperienceApiV2;
 use \Directus\Application\Application;
 use \Directus\Services\FilesServices;
 use \GuzzleHttp\Client;
+use \GuzzleHttp\Psr7;
+use \GuzzleHttp\Exception\ClientException;
 
 class AzureCustomVisionTrainer
 {
@@ -169,7 +171,7 @@ class AzureCustomVisionTrainer
             $images['images'][] = ['contents' => $base64];
         }
 
-        $this->logger->debug('Body to send', $images);
+        // $this->logger->debug('Body to send', $images);
 
         $response = $client->post(
             $this->training_endpoint . '/images/files',
@@ -324,18 +326,23 @@ class AzureCustomVisionTrainer
 
         $client = $this->createClient();
 
-        $response = $client->delete(
-            $this->training_endpoint . '/tags/' . $id
-        );
-
-        $this->logger->debug(
-            'Azure CV tag deletion headers',
-            $response->getHeaders()
-        );
-        $this->logger->debug(
-            // 'Azure CV iterations body',
-            $response->getBody()
-        );
+        try {
+            $response = $client->delete(
+                $this->training_endpoint . '/tags/' . $id
+            );
+            $this->logger->debug(
+                'Azure CV tag deletion headers',
+                $response->getHeaders()
+            );
+            $this->logger->debug(
+                // 'Azure CV iterations body',
+                $response->getBody()
+            );
+        } catch (ClientException $e) {
+            $this->logger->warning('Tag ' . $id . ' not deleted, did it exist?');
+            $this->logger->debug(Psr7\str($e->getRequest()));
+            $this->logger->debug(Psr7\str($e->getResponse()));
+        }
     }
 
     /**
@@ -350,29 +357,32 @@ class AzureCustomVisionTrainer
         $this->logger->debug('Training iteration, with ' . $force . ' force');
 
         $client = $this->createClient();
-        if ($force) {
-            $response = $client->post(
-                $this->training_endpoint . '/train',
-                ['query' => ['forceTrain' => 'true']]
-            );
-        } else {
-            $response = $client->post($this->training_endpoint . '/train');
-        }
-        $this->logger->debug(
-            'Azure CV iteration headers',
-            $response->getHeaders()
-        );
-        $this->logger->debug(
-            // 'Azure CV iterations body',
-            $response->getBody()
-        );
 
-        if ($response->getStatusCode() == 200) {
+        try {
+            if ($force) {
+                $response = $client->post(
+                    $this->training_endpoint . '/train',
+                    ['query' => ['forceTrain' => 'true']]
+                );
+            } else {
+                $response = $client->post($this->training_endpoint . '/train');
+            }
+            $this->logger->debug(
+                'Azure CV iteration headers',
+                $response->getHeaders()
+            );
+            $this->logger->debug(
+                // 'Azure CV iterations body',
+                $response->getBody()
+            );
+
             $iteration = json_decode($response->getBody());
             return $iteration;
-        } else {
-            // Something weird happened with training.
-            $this->logger->warning('Training error', json_decode($response->getBody()));
+        } catch (ClientException $e) {
+            $this->logger->warning('Tag ' . $id . ' not deleted, did it exist?');
+            $this->logger->debug(Psr7\str($e->getRequest()));
+            $this->logger->debug(Psr7\str($e->getResponse()));
+
             return false;
         }
     }
@@ -380,25 +390,30 @@ class AzureCustomVisionTrainer
     /**
      * Train and publish a new iteration.
      *
-     * @param boolean $force Force training even if nothing changed.
+     * @param bool $force  Force training even if nothing changed.
+     * @param bool $delete Delete the previous production iteration.
      *
      * @return void
      */
-    function trainAndPublishIteration($force = false)
+    function trainAndPublishIteration($force = false, $delete = true)
     {
         $this->logger->debug('Training and publishing an iteration');
         $iteration = $this->trainIteration($force);
-        while ($iteration->status != 'Completed') {
-            $this->logger->debug('Waiting iteration ' . $iteration->id . ' for ' . $this->training_delay);
-            sleep($this->training_delay);
-            $iteration = $this->getIteration($iteration->id);
-        }
-        $this->logger->debug('Trained iteration ' . $iteration->id);
+        if ($iteration) {
+            while ($iteration->status != 'Completed') {
+                $this->logger->debug('Waiting iteration ' . $iteration->id . ' for ' . $this->training_delay);
+                sleep($this->training_delay);
+                $iteration = $this->getIteration($iteration->id);
+            }
+            $this->logger->debug('Trained iteration ' . $iteration->id);
 
-        // $current = $this->getProductionIteration();
-        // $this->unpublishIteration($current);
-        $this->unpublishProductionIteration();
-        $this->publishIteration($iteration->id);
+            // $current = $this->getProductionIteration();
+            // $this->unpublishIteration($current);
+
+            $this->unpublishProductionIteration($delete);
+            $this->publishIteration($iteration->id, $delete);
+        }
+
     }
 
     /**
@@ -439,16 +454,20 @@ class AzureCustomVisionTrainer
      * Unpublish an iteration.
      *
      * @param string $iteration Iteration UUID.
+     * @param bool   $delete Delete the previous iteration.
      *
      * @return void
      */
-    function unpublishIteration($iteration)
+    function unpublishIteration(string $iteration, bool $delete)
     {
         $this->logger->debug('Unpublishing iteration ' . $iteration);
         
         // unpublish it
         $client = $this->createClient();
         $client->delete($this->training_endpoint . '/iterations/' . $iteration . '/publish');
+        if ($delete) {
+            $this->deleteIteration($iteration);
+        }
     }
 
     /**
@@ -456,14 +475,29 @@ class AzureCustomVisionTrainer
      *
      * @return void
      */
-    function unpublishProductionIteration()
+    function unpublishProductionIteration(bool $delete)
     {
         $this->logger->debug('Unpublishing ' . $this->pub_model_name . ' iteration');
         $prod_model = $this->getProductionIteration();
         // FIXME: maybe throw an exception
         if (!$prod_model === false) {
-            $this->unpublishIteration($prod_model->id);
+            $this->unpublishIteration($prod_model->id, $delete);
         }
+    }
+
+    /**
+     * Delete an iteration.
+     *
+     * @param string $id Iteration id.
+     *
+     * @return void
+     */
+    function deleteIteration(string $id)
+    {
+        $this->logger->debug('Deleting iteration ' . $id);
+
+        $client = $this->createClient();
+        $client->delete($this->training_endpoint . '/iterations/' . $id);
     }
 
     /**
