@@ -20,24 +20,42 @@ return [
     // want to store the UUID of the tag returned by upstream Azure
     // Custom Vision service.
     'filters' => [
-        'item.create.artwork' => function (Payload $payload) {
+        // 'item.create.artwork' => function (Payload $payload) {
+        //     $container = Application::getInstance()->getContainer();
+        //     $logger = $container->get('logger');
+
+        //     $logger->debug('Artwork data in filter', (array)$payload);
+
+        //     $azure = new AzureCustomVisionTrainer(
+        //         $config['project']['endpoint'],
+        //         $config['project']['id'],
+        //         $config['training']['key'],
+        //         $config['prediction']['resource_id'],
+        //         $config['prediction']['production_model']
+        //     );
+
+        //     $tag = $azure->createTagFromImage($image);
+        //     $payload->set('image_recognition_tag_id', $tag['id']);
+
+        //     $logger->debug('After setting the tag UUID.', (array)$payload);
+
+        //     return $payload;
+        // }
+        'item.create.artwork:before' => function (Payload $payload) {
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
 
-            $logger->debug('Artwork data in filter', (array)$payload);
+            $artwork = $payload->getData();
+            $logger->debug('Artwork create filter', $artwork);
 
-            $azure = new AzureCustomVisionTrainer(
-                $config['project']['endpoint'],
-                $config['project']['id'],
-                $config['training']['key'],
-                $config['prediction']['resource_id'],
-                $config['prediction']['production_model']
-            );
+            return $payload;
+        },
+        'item.update.artwork:before' => function (Payload $payload) {
+            $container = Application::getInstance()->getContainer();
+            $logger = $container->get('logger');
 
-            $tag = $azure->createTagFromImage($image);
-            $payload->set('image_recognition_tag_id', $tag['id']);
-
-            $logger->debug('After setting the tag UUID.', (array)$payload);
+            $artwork = $payload->getData();
+            $logger->debug('Artwork update filter', $artwork);
 
             return $payload;
         }
