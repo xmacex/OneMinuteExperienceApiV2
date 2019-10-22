@@ -15,32 +15,7 @@ use \OneMinuteExperienceApiV2\AzureCustomVisionTrainer;
 require_once 'AzureCustomVisionTrainer.php';
 
 return [
-    // FIXME: Filters are not triggering, sadly. Reported at
-    // https://github.com/directus/api/issues/1364. This is where I
-    // want to store the UUID of the tag returned by upstream Azure
-    // Custom Vision service.
     'filters' => [
-        // 'item.create.artwork' => function (Payload $payload) {
-        //     $container = Application::getInstance()->getContainer();
-        //     $logger = $container->get('logger');
-
-        //     $logger->debug('Artwork data in filter', (array)$payload);
-
-        //     $azure = new AzureCustomVisionTrainer(
-        //         $config['project']['endpoint'],
-        //         $config['project']['id'],
-        //         $config['training']['key'],
-        //         $config['prediction']['resource_id'],
-        //         $config['prediction']['production_model']
-        //     );
-
-        //     $tag = $azure->createTagFromImage($image);
-        //     $payload->set('image_recognition_tag_id', $tag['id']);
-
-        //     $logger->debug('After setting the tag UUID.', (array)$payload);
-
-        //     return $payload;
-        // }
         'item.create.artwork:before' => function (Payload $payload) {
             $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
 
@@ -71,8 +46,13 @@ return [
 
             $artwork = $payload->getData();
             $logger->debug('Artwork update filter', $artwork);
-            // TODO: if $artwork['status'] == "deleted", then remove
-            // the tag, the images and retrain and republish.
+            // TODO: if $payload->get('status') == "deleted" aka. if
+            // $artwork['status'] == "deleted", then remove the tag,
+            // the images and retrain and republish.
+
+            // TODO: if $payload->has('image') or exists
+            // $artwork['image'], then remove the tag, the images,
+            // create a new tag tag and store it's UUID.
 
             return $payload;
         }
