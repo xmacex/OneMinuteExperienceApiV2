@@ -15,6 +15,7 @@ use \Directus\Services\FilesServices;
 use \GuzzleHttp\Client;
 use \GuzzleHttp\Psr7;
 use \GuzzleHttp\Exception\ClientException;
+use \Imagick;
 
 class AzureCustomVisionTrainer
 {
@@ -163,10 +164,19 @@ class AzureCustomVisionTrainer
             'tagIds' => [$tag_id]
         ];
 
-        // Rotations
+        // Transformations
         foreach ([-10, -5, 0, 5, 10] as $angle) {
-            $imagick = new \Imagick($fileurl);
+            $imagick = new Imagick($fileurl);
+            $imagick->setImageFormat('png');
+            $imagick->setImageVirtualPixelMethod(Imagick::VIRTUALPIXELMETHOD_TRANSPARENT);
+
             $imagick->rotateimage('#00000000', $angle);
+            $this->logger->debug('distorting');
+            $imagick->distortImage(
+                Imagick::DISTORTION_PERSPECTIVE,
+                $this->createControlPoints($imagick->getImageWidth(), $imagick->getImageHeight(), 10, 10),
+                true
+            );
             $base64 = base64_encode($imagick->getImageBlob());
             $images['images'][] = ['contents' => $base64];
         }
@@ -637,5 +647,36 @@ class AzureCustomVisionTrainer
             // 'Azure CV tag headers',
             $response->getBody()
         );
+    }
+
+    /**
+     * Create control points for distortions.
+     *
+     * @param int $w      Image width.
+     * @param int $h      Image height.
+     * @param int $margin Margin.
+     * @param int $r      Randomness. Between 0 and 50 maybe?
+     *
+     * @return array
+     */
+    function createControlPoints(int $w, int $h, int $margin, int $r)
+    {
+        $controlPoints = array(
+            $margin, $margin,
+            $margin * 0.1 * rand(-$r, $r), $margin * 0.1 * rand(-$r, $r),
+
+            $margin, $h - $margin,
+            $margin, $h - $margin * 0.1 * rand($r, -$r),
+
+            $w - $margin, $margin,
+            $w - $margin * 0.1 * rand(-$r, $r), $margin * 0.1 * rand(-$r, $r),
+
+            $w - $margin, $h - $margin,
+            $w - $margin * 0.1 * rand(-$r, $r), $h - $margin * 0.1 * rand(-$r, $r)
+        );
+
+        $this->logger->debug('Control points', $controlPoints);
+
+        return $controlPoints;
     }
 }
