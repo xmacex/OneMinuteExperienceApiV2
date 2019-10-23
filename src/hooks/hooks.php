@@ -85,7 +85,7 @@ return [
 
             $logger->debug('Artwork data', $artwork);
 
-            if (!is_null($artwork['images'])) {
+            if (!is_null($artwork['image'])) {
                 $filesService = new FilesServices($container);
                 $file = $filesService->findByIds($artwork['image']);
                 $image = $file['data'];
