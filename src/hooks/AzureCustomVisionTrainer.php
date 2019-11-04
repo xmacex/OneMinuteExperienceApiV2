@@ -71,8 +71,8 @@ class AzureCustomVisionTrainer
      * I should actually have a reasonable test framework in place
      * instead of these practices.
      *
-     * @param array $image Image data.
-     * @param array $data  Artwork data.
+     * @param array $image   Image data.
+     * @param array $artwork Artwork data.
      *
      * @return void
      */
@@ -214,10 +214,11 @@ class AzureCustomVisionTrainer
     {
         $this->logger->debug('Creating a tag for artwork', $artwork);
 
-        $aid = $artwork['id'];
+        // $aid = $artwork['id'];
         $artist = $artwork['artist_name'];
         $title = $artwork['title'];
-        $tagname = $aid . ': ' . $artist . ' - ' . $title;
+        // $tagname = $aid . ': ' . $artist . ' - ' . $title;
+        $tagname = uniqid() . ': ' . $artist . ' - ' . $title;
 
         $tag = $this->createTag($tagname);
 
@@ -464,7 +465,7 @@ class AzureCustomVisionTrainer
      * Unpublish an iteration.
      *
      * @param string $iteration Iteration UUID.
-     * @param bool   $delete Delete the previous iteration.
+     * @param bool   $delete    Delete the previous iteration.
      *
      * @return void
      */
@@ -482,6 +483,8 @@ class AzureCustomVisionTrainer
 
     /**
      * Unpublish the current production iteration.
+     *
+     * @param bool $delete Delete the current production iteration.
      *
      * @return void
      */
