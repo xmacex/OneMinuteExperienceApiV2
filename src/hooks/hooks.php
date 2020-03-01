@@ -18,7 +18,7 @@ require_once 'AzureCustomVisionTrainer.php';
 return [
     'filters' => [
         'item.create.artwork:before' => function (Payload $payload) {
-            $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
+            $config = parse_ini_file(realpath('../../../../../config/ome.ini'), true);
 
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
@@ -44,7 +44,7 @@ return [
             return $payload;
         },
         'item.update.artwork:before' => function (Payload $payload) {
-            $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
+            $config = parse_ini_file(realpath('../../../../../config/ome.ini'), true);
 
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
@@ -78,7 +78,7 @@ return [
     ],
     'actions' => [
         'item.create.artwork' => function (array $artwork) {
-            $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
+            $config = parse_ini_file(realpath('../../../../../config/ome.ini'), true);
 
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
@@ -105,7 +105,7 @@ return [
             }
         },
         'item.update.artwork:before' => function (array $artwork) {
-            $config = parse_ini_file('/var/www/1mev2/directus/config/ome.ini', true);
+            $config = parse_ini_file(realpath('../../../../../config/ome.ini'), true);
 
             $container = Application::getInstance()->getContainer();
             $logger = $container->get('logger');
